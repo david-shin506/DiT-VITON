@@ -1,0 +1,20 @@
+train:
+  device: cuda
+  seed: 0
+  steps: 60000
+  batch_size: 128
+  learning_rate: 0.0001
+  warmup_steps: 1000
+  ema_decay: 0.999
+  weight_decay: 0.0
+  betas: [0.9, 0.95]
+  gradient_clip_norm: 1.0
+  dataloader_workers: 2
+  pin_memory: true
+  drop_last: true
+  persistent_workers: true
+  log_every: 50
+  sample_every: 300
+  sample_steps: 32
+  save_every_minutes: 30
+  mixed_precision: float16

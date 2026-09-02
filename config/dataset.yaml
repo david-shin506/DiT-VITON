@@ -1,0 +1,22 @@
+common:
+  image_size: [256, 192]
+  latent_size: [32, 24]
+  latent_channels: 4
+  vae_scale: 0.13025
+
+datasets:
+  fashionpedia:
+    root: /kaggle/input/datasets/pchhalotre321chh/fashionpedia-dataset
+    split: train
+    min_area: 0.04
+    image_limit: 0
+    masks_per_image: 5
+
+  people_clothing_segmentation:
+    root: /kaggle/input/datasets/rajkumarl/people-clothing-segmentation
+    labels_csv: /kaggle/input/datasets/rajkumarl/people-clothing-segmentation/labels.csv
+    masks_per_image: 6
+    area_min: 0.02
+    rectangle_shrink: 0.05
+    dilate_probability: 0.5
+    crop_margin: 0.06

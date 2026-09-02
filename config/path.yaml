@@ -1,0 +1,9 @@
+paths:
+  cache:
+    fashionpedia: /kaggle/working/latents.ckpt
+    people_clothing_segmentation: /kaggle/working/latents_pcs.ckpt
+  checkpoint_dir: /kaggle/working/ckpt
+  resume_checkpoint: "" # need for continuing your training
+  inference_checkpoint: /kaggle/input/datasets/sdavid9224/viton-ckpt/resume.ckpt
+  inference_dataset_root: /kaggle/input/datasets/marquis03/high-resolution-viton-zalando-dataset/train
+  inference_output_dir: /kaggle/working/inference

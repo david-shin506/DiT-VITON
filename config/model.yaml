@@ -1,0 +1,14 @@
+vae:
+  pretrained_model_name_or_path: madebyollin/sdxl-vae-fp16-fix
+  dtype: float16
+
+model:
+  in_channels: 4
+  embedding_dim: 768
+  depth: 12
+  num_heads: 8
+  patch_size: 2
+  attention_dropout: 0.0
+  forward_expansion: 4
+  forward_dropout: 0.0
+  cross_attention_end: -1
