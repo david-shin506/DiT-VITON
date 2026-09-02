@@ -18,6 +18,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from src.config import DEFAULT_CONFIG_DIR, ensure_parent, load_configs
 from src.preprocessing.common import MultiGpuVaeEncoder, load_vae
+from src.preprocessing.progress import CountProgress
 
 
 UPPER_NAMES = {
@@ -301,6 +302,7 @@ def build_pcs_cache(
     scan_workers: int = 16,
     seed: int = 0,
     output: str | None = None,
+    progress_every: int | None = None,
 ):
     configs = load_configs(config_dir)
     common = configs["dataset"]["common"]
@@ -310,6 +312,8 @@ def build_pcs_cache(
     height, width = common["image_size"]
     masks = settings["masks_per_image"]
     scale = common["vae_scale"]
+    if progress_every is None:
+        progress_every = common["progress_every"]
     class_ids = load_pcs_class_ids(settings["root"], settings.get("labels_csv"))
     categories = list(zip(("upper", "lower", "full"), class_ids))
     pairs = list_pcs_pairs(settings["root"])
@@ -352,7 +356,11 @@ def build_pcs_cache(
     )
     full, agnostic, mask_tensors, valid_counts = [], [], [], []
     start_time = time.time()
-    for batch_index, (images, pixel_masks, counts) in enumerate(loader):
+    processed = 0
+    progress = CountProgress(len(pairs), progress_every)
+    for images, pixel_masks, counts in loader:
+        source_batch_size = images.shape[0]
+        processed += source_batch_size
         images = torch.cat([images, torch.flip(images, dims=[3])])
         pixel_masks = torch.cat([pixel_masks, torch.flip(pixel_masks, dims=[3])])
         counts = torch.cat([counts, counts])
@@ -375,14 +383,7 @@ def build_pcs_cache(
             .view(batch_size, masks, 1, height // 8, width // 8)
             .to(torch.uint8)
         )
-        if batch_index % 5 == 0:
-            done = min((batch_index + 1) * batch, len(pairs))
-            elapsed = time.time() - start_time
-            speed = done / elapsed
-            print(
-                f"  {done}/{len(pairs)}  {speed:.0f} img/s  "
-                f"ETA {(len(pairs) - done) / max(speed, 1e-9) / 60:.1f} min"
-            )
+        progress.update(processed)
     z_full = torch.cat(full)
     z_agnostic = torch.cat(agnostic)
     masks_out = torch.cat(mask_tensors)
@@ -414,6 +415,11 @@ def main():
     parser.add_argument("--scan-workers", type=int, default=16)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--output")
+    parser.add_argument(
+        "--progress-every",
+        type=int,
+        help="Print completed/total progress at this image interval (default: dataset.yaml).",
+    )
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
     configs = load_configs(args.config_dir)
@@ -425,13 +431,14 @@ def main():
         print(f"PCS cache exists ({output.stat().st_size / 1e6:.0f} MB), skip: {output}")
         return
     build_pcs_cache(
-        args.config_dir,
-        args.batch,
-        args.chunk,
-        args.workers,
-        args.scan_workers,
-        args.seed,
-        args.output,
+        config_dir=args.config_dir,
+        batch=args.batch,
+        chunk=args.chunk,
+        workers=args.workers,
+        scan_workers=args.scan_workers,
+        seed=args.seed,
+        output=args.output,
+        progress_every=args.progress_every,
     )
 
 

@@ -99,16 +99,21 @@ bash src/vae_preprocessing/latent_save.sh --dataset-name pcs
 ```
 
 노트북과 같은 기본 실행 인자는 `batch=24`, `chunk=32`, `workers=4`, `seed=0`입니다.
+처리 진행률은 기본적으로 1000개마다 `현재 처리 수/전체 수` 형식으로 출력되며,
+`config/dataset.yaml`의 `common.progress_every`에서 간격을 변경할 수 있습니다.
 필요하면 Python cache builder로 그대로 전달할 수 있습니다.
 
 ```bash
 bash src/vae_preprocessing/latent_save.sh \
   --dataset-name fashionpedia \
-  --batch 24 --chunk 32 --workers 4 --seed 0 --force
+  --batch 24 --chunk 32 --workers 4 --seed 0 \
+  --progress-every 500 --force
 ```
 
-`--force`는 기존 캐시를 다시 생성합니다. 일회성으로 YAML 값을 덮어쓸 때는
-`--output /absolute/path/cache.ckpt`를 사용할 수 있습니다.
+`--progress-every`는 해당 실행에서 YAML의 진행률 간격을 덮어씁니다. 마지막 처리
+수는 설정 간격과 무관하게 항상 출력됩니다. `--force`는 기존 캐시를 다시 생성합니다.
+일회성으로 저장 경로를 덮어쓸 때는 `--output /absolute/path/cache.ckpt`를 사용할 수
+있습니다.
 
 ## 학습
 

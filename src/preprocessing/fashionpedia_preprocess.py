@@ -16,6 +16,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from src.config import DEFAULT_CONFIG_DIR, ensure_parent, load_configs
 from src.preprocessing.common import MultiGpuVaeEncoder, load_vae, random_mask
+from src.preprocessing.progress import CountProgress
 
 
 UPPER = {0, 1, 2, 3, 4, 5, 9, 10, 11, 12}
@@ -170,6 +171,7 @@ def build_cache(
     workers: int = 4,
     seed: int = 0,
     output: str | None = None,
+    progress_every: int | None = None,
 ):
     configs = load_configs(config_dir)
     common = configs["dataset"]["common"]
@@ -179,6 +181,8 @@ def build_cache(
     height, width = common["image_size"]
     masks = settings["masks_per_image"]
     scale = common["vae_scale"]
+    if progress_every is None:
+        progress_every = common["progress_every"]
     pairs = list_pairs(
         settings["root"],
         settings["split"],
@@ -204,8 +208,11 @@ def build_cache(
     full, agnostic, mask_tensors = [], [], []
     hit_sum = hit_count = 0
     start_time = time.time()
-    for batch_index, (images, pixel_masks, hits) in enumerate(loader):
+    processed = 0
+    progress = CountProgress(len(pairs), progress_every)
+    for images, pixel_masks, hits in loader:
         batch_size = images.shape[0]
+        processed += batch_size
         hit_sum += float(hits.sum())
         hit_count += batch_size
         images = torch.cat([images, torch.flip(images, dims=[3])])
@@ -232,15 +239,10 @@ def build_cache(
             .view(doubled_batch, masks, 1, height // 8, width // 8)
             .to(torch.uint8)
         )
-        if batch_index % 20 == 0:
-            done = min((batch_index + 1) * batch, len(pairs))
-            elapsed = time.time() - start_time
-            speed = done / elapsed
-            print(
-                f"  {done}/{len(pairs)}  {speed:.0f} img/s  "
-                f"bbox {hit_sum / hit_count:.2f}  "
-                f"ETA {(len(pairs) - done) / max(speed, 1e-9) / 60:.1f} min"
-            )
+        progress.update(
+            processed,
+            suffix=f"bbox usage {hit_sum / hit_count:.2f}",
+        )
 
     z_full = torch.cat(full)
     z_agnostic = torch.cat(agnostic)
@@ -265,6 +267,11 @@ def main():
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--output")
+    parser.add_argument(
+        "--progress-every",
+        type=int,
+        help="Print completed/total progress at this image interval (default: dataset.yaml).",
+    )
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
     configs = load_configs(args.config_dir)
@@ -272,7 +279,15 @@ def main():
     if output.is_file() and not args.force:
         print(f"fashionpedia cache exists ({output.stat().st_size / 1e6:.0f} MB), skip: {output}")
         return
-    build_cache(args.config_dir, args.batch, args.chunk, args.workers, args.seed, args.output)
+    build_cache(
+        config_dir=args.config_dir,
+        batch=args.batch,
+        chunk=args.chunk,
+        workers=args.workers,
+        seed=args.seed,
+        output=args.output,
+        progress_every=args.progress_every,
+    )
 
 
 if __name__ == "__main__":

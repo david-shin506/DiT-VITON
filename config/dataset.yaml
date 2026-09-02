@@ -3,6 +3,7 @@ common:
   latent_size: [32, 24]
   latent_channels: 4
   vae_scale: 0.13025
+  progress_every: 1000
 
 datasets:
   fashionpedia:
