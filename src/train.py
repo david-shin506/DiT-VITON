@@ -83,7 +83,24 @@ def main():
     parser = argparse.ArgumentParser(description="Train TinyDiT for latent-space virtual try-on.")
     parser.add_argument("--config-dir", default=str(DEFAULT_CONFIG_DIR))
     parser.add_argument("--resume", help="Override paths.resume_checkpoint.")
+    parser.add_argument(
+        "--image-size",
+        type=int,
+        nargs=2,
+        metavar=("HEIGHT", "WIDTH"),
+    )
     args = parser.parse_args()
+
+    common = configs["dataset"]["common"]
+
+    if args.image_size is not None:
+        height, width = args.image_size
+
+    if height % 8 != 0 or width % 8 != 0:
+        raise ValueError("image size must be divisible by 8")
+
+    common["image_size"] = [height, width]
+    common["latent_size"] = [height // 8, width // 8]
 
     configs = load_configs(args.config_dir)
     dataset_config = configs["dataset"]

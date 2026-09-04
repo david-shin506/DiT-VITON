@@ -11,9 +11,9 @@ from .embeddings import TimestepEmbedder, sincos_2d
 class DiT(nn.Module):
     def __init__(
         self,
+        latent_size: tuple[int, int],
         in_channels: int = 4,
         emb_dim: int = 768,
-        latent_size: tuple[int, int] = (32, 24),
         depth: int = 12,
         num_head: int = 8,
         drop_p: float = 0.0,
@@ -23,6 +23,14 @@ class DiT(nn.Module):
         cross_end: int = -1,
     ):
         super().__init__()
+
+        height, width = latent_size
+        if height % patch_size != 0 or width % patch_size != 0:
+            raise ValueError(
+                f"latent_size {latent_size} must be divisible by "
+                f"patch_size={patch_size}."
+            )
+
         self.cross_end = cross_end
         self.in_channels = in_channels * 2 + 1
         self.g_channels = in_channels
@@ -81,6 +89,12 @@ class DiT(nn.Module):
         mask: torch.Tensor,
         garment: torch.Tensor | None = None,
     ) -> torch.Tensor:
+        
+        if x.shape[-2:] != (self.H, self.W):
+            raise ValueError(
+                f"Expected latent spatial size {(self.H, self.W)}, "
+                f"but got {tuple(x.shape[-2:])}."
+            ) 
         if self.cross_end >= 0 and garment is None:
             raise ValueError("A garment latent is required when cross attention is enabled.")
         if self.cross_end < 0 and garment is not None:
