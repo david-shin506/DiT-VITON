@@ -91,23 +91,32 @@ def main():
     )
     args = parser.parse_args()
 
-    common = configs["dataset"]["common"]
-
-    if args.image_size is not None:
-        height, width = args.image_size
-
-    if height % 8 != 0 or width % 8 != 0:
-        raise ValueError("image size must be divisible by 8")
-
-    common["image_size"] = [height, width]
-    common["latent_size"] = [height // 8, width // 8]
-
     configs = load_configs(args.config_dir)
     dataset_config = configs["dataset"]
     paths = configs["path"]["paths"]
     model_config = configs["model"]["model"]
     vae_config = configs["model"]["vae"]
     train_config = configs["train"]["train"]
+
+    common = dataset_config["common"]
+
+    if args.image_size is not None:
+        height, width = args.image_size
+
+    # VAE 8배 축소 × DiT patch size
+    required_multiple = 8 * model_config["patch_size"]
+
+    if (
+        height % required_multiple != 0
+        or width % required_multiple != 0
+    ):
+        raise ValueError(
+            f"image size must be divisible by {required_multiple}"
+        )
+
+    common["image_size"] = [height, width]
+    common["latent_size"] = [height // 8, width // 8]
+
     device = train_config["device"]
     if not torch.cuda.is_available() or not device.startswith("cuda"):
         raise RuntimeError("This training pipeline requires a CUDA device.")

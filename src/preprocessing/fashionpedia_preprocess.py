@@ -172,13 +172,22 @@ def build_cache(
     seed: int = 0,
     output: str | None = None,
     progress_every: int | None = None,
+    image_size: list[int] | None = None,
 ):
     configs = load_configs(config_dir)
     common = configs["dataset"]["common"]
+
+    if image_size is None:
+        height, width = common["image_size"]
+    else:
+        height, width = image_size
+
+    if height % 8 != 0 or width % 8 != 0:
+        raise ValueError("image size must be divisible by 8")
+
     settings = configs["dataset"]["datasets"]["fashionpedia"]
     output = output or configs["path"]["paths"]["cache"]["fashionpedia"]
     output_path = ensure_parent(output)
-    height, width = common["image_size"]
     masks = settings["masks_per_image"]
     scale = common["vae_scale"]
     if progress_every is None:
@@ -262,6 +271,14 @@ def build_cache(
 def main():
     parser = argparse.ArgumentParser(description="Build the Fashionpedia VAE latent cache.")
     parser.add_argument("--config-dir", default=str(DEFAULT_CONFIG_DIR))
+
+    parser.add_argument(
+        "--image-size",
+        type=int,
+        nargs=2,
+        metavar=("HEIGHT", "WIDTH"),
+    )
+
     parser.add_argument("--batch", type=int, default=24)
     parser.add_argument("--chunk", type=int, default=32)
     parser.add_argument("--workers", type=int, default=4)
