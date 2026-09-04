@@ -304,6 +304,7 @@ def main():
         seed=args.seed,
         output=args.output,
         progress_every=args.progress_every,
+        image_size=args.image_size,
     )
 
 
