@@ -100,10 +100,12 @@ def main():
 
     common = dataset_config["common"]
 
-    if args.image_size is not None:
-        height, width = args.image_size
+    height, width = (
+        args.image_size
+        if args.image_size is not None
+        else common["image_size"]
+    )
 
-    # VAE 8배 축소 × DiT patch size
     required_multiple = 8 * model_config["patch_size"]
 
     if (
