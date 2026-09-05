@@ -132,8 +132,34 @@ def main():
     parser.add_argument("--steps", type=int, default=50)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--show", action="store_true")
+
+    parser.add_argument(
+        "--image-size",
+        type=int,
+        nargs=2,
+        metavar=("HEIGHT", "WIDTH"),
+    )
+    
     args = parser.parse_args()
     configs = load_configs(args.config_dir)
+
+    if args.image_size is not None:
+        height, width = args.image_size
+        patch_size = configs["model"]["model"]["patch_size"]
+        required_multiple = 8 * patch_size
+
+        if (
+            height % required_multiple != 0
+            or width % required_multiple != 0
+        ):
+            raise ValueError(
+                f"image size must be divisible by {required_multiple}"
+            )
+
+        common = configs["dataset"]["common"]
+        common["image_size"] = [height, width]
+        common["latent_size"] = [height // 8, width // 8]
+
     paths = configs["path"]["paths"]
     agnostic = args.agnostic or str(
         Path(paths["inference_dataset_root"]) / "agnostic-v3.2" / "00036_00.jpg"

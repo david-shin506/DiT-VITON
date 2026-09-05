@@ -99,12 +99,7 @@ def main():
     train_config = configs["train"]["train"]
 
     common = dataset_config["common"]
-
-    height, width = (
-        args.image_size
-        if args.image_size is not None
-        else common["image_size"]
-    )
+    height, width = args.image_size or common["image_size"]
 
     required_multiple = 8 * model_config["patch_size"]
 
