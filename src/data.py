@@ -36,21 +36,64 @@ class InpaintConcatDataset(ConcatDataset):
         self.scale = datasets[0].scale
         self.parts = datasets
 
+def build_dataset(
+    cache_paths: dict[str, str],
+    dataset_name: str = "all",
+):
+    if dataset_name not in ("all", "fashionpedia", "pcs"):
+        raise ValueError(f"Unsupported dataset: {dataset_name}")
 
-def build_dataset(cache_paths: dict[str, str]):
     fashionpedia_path = cache_paths["fashionpedia"]
+    pcs_path = cache_paths["people_clothing_segmentation"]
+
+    # PCS만 사용하는 경우
+    if dataset_name == "pcs":
+        if not os.path.isfile(pcs_path):
+            raise FileNotFoundError(
+                f"PCS cache does not exist: {pcs_path}. "
+                "Run latent_save.sh first."
+            )
+
+        return InpaintDS(
+            pcs_path,
+            tag="people_clothing_segmentation",
+        )
+
+    # Fashionpedia 또는 all인 경우 Fashionpedia는 필수
     if not os.path.isfile(fashionpedia_path):
         raise FileNotFoundError(
-            f"Fashionpedia cache does not exist: {fashionpedia_path}. Run latent_save.sh first."
+            f"Fashionpedia cache does not exist: {fashionpedia_path}. "
+            "Run latent_save.sh first."
         )
-    parts = [InpaintDS(fashionpedia_path, tag="fashionpedia")]
-    pcs_path = cache_paths["people_clothing_segmentation"]
+
+    fashionpedia = InpaintDS(
+        fashionpedia_path,
+        tag="fashionpedia",
+    )
+
+    # Fashionpedia만 사용하는 경우
+    if dataset_name == "fashionpedia":
+        return fashionpedia
+
+    # dataset_name == "all"
+    parts = [fashionpedia]
+
     if os.path.isfile(pcs_path):
-        parts.append(InpaintDS(pcs_path, tag="people_clothing_segmentation"))
+        parts.append(
+            InpaintDS(
+                pcs_path,
+                tag="people_clothing_segmentation",
+            )
+        )
     else:
-        print(f"[warn] PCS cache not found; training with Fashionpedia only: {pcs_path}")
+        print(
+            "[warn] PCS cache not found; "
+            f"training with Fashionpedia only: {pcs_path}"
+        )
+
     if len(parts) == 1:
         return parts[0]
+
     dataset = InpaintConcatDataset(parts)
     print(f"total samples: {len(dataset)}")
     return dataset

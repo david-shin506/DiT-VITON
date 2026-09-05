@@ -304,6 +304,7 @@ def build_pcs_cache(
     output: str | None = None,
     progress_every: int | None = None,
     image_size: list[int] | None = None,
+    image_limit: int | None = None,
 ):
     configs = load_configs(config_dir)
     common = configs["dataset"]["common"]
@@ -326,6 +327,12 @@ def build_pcs_cache(
     class_ids = load_pcs_class_ids(settings["root"], settings.get("labels_csv"))
     categories = list(zip(("upper", "lower", "full"), class_ids))
     pairs = list_pcs_pairs(settings["root"])
+
+    if image_limit is not None:
+        if image_limit < 1:
+            raise ValueError("image limit must be positive")
+        pairs = pairs[:image_limit]
+
     pairs = scan_pcs(
         pairs,
         categories,
@@ -426,6 +433,8 @@ def main():
         metavar=("HEIGHT", "WIDTH"),
     )
 
+    parser.add_argument("--image-limit", type=int)
+
     parser.add_argument("--batch", type=int, default=24)
     parser.add_argument("--chunk", type=int, default=32)
     parser.add_argument("--workers", type=int, default=4)
@@ -457,6 +466,7 @@ def main():
         output=args.output,
         progress_every=args.progress_every,
         image_size=args.image_size,
+        image_limit=args.image_limit,
     )
 
 

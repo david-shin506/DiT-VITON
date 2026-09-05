@@ -89,6 +89,20 @@ def main():
         nargs=2,
         metavar=("HEIGHT", "WIDTH"),
     )
+
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        help="Override train.batch_size.",
+    )
+
+    parser.add_argument(
+        "--dataset-name",
+        choices=("all", "fashionpedia", "pcs"),
+        default="all",
+        help="Select the latent cache used for training.",
+    )
+
     args = parser.parse_args()
 
     configs = load_configs(args.config_dir)
@@ -97,6 +111,11 @@ def main():
     model_config = configs["model"]["model"]
     vae_config = configs["model"]["vae"]
     train_config = configs["train"]["train"]
+
+    if args.batch_size is not None:
+        if args.batch_size < 1:
+            raise ValueError("batch size must be positive")
+        train_config["batch_size"] = args.batch_size
 
     common = dataset_config["common"]
     height, width = args.image_size or common["image_size"]
@@ -121,7 +140,10 @@ def main():
     checkpoint_dir = Path(paths["checkpoint_dir"])
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-    dataset = build_dataset(paths["cache"])
+    dataset = build_dataset(
+        paths["cache"],
+        dataset_name=args.dataset_name,
+    )
     workers = train_config["dataloader_workers"]
     loader = DataLoader(
         dataset,
